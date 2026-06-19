@@ -159,3 +159,4 @@ C:\Users\yannn\VSC Projects\e-banking\backend\bin\Debug\net10.0\runtimes\win\lib
 C:\Users\yannn\VSC Projects\e-banking\backend\bin\Debug\net10.0\runtimes\win-arm64\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\yannn\VSC Projects\e-banking\backend\bin\Debug\net10.0\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\yannn\VSC Projects\e-banking\backend\bin\Debug\net10.0\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
+C:\Users\yannn\VSC Projects\e-banking\backend\obj\Debug\net10.0\backend.sourcelink.json
