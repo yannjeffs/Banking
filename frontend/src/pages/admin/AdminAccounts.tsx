@@ -15,7 +15,6 @@ interface CreateForm {
 
 export default function AdminAccounts() {
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
-  const [filtered, setFiltered] = useState<AdminAccount[]>([]);
   const [users, setUsers]       = useState<AdminUser[]>([]);
   const [search, setSearch]     = useState<string>('');
   const [loading, setLoading]   = useState<boolean>(true);
@@ -36,7 +35,6 @@ export default function AdminAccounts() {
         ]);
         if (cancelled) return;
         setAccounts(accRes.data);
-        setFiltered(accRes.data);
         setUsers(usersRes.data);
       } finally {
         if (!cancelled) setLoading(false);
@@ -47,16 +45,34 @@ export default function AdminAccounts() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [accRes, usersRes] = await Promise.all([
+          api.get<AdminAccount[]>('/admin/accounts'),
+          api.get<AdminUser[]>('/admin/users'),
+        ]);
+        if (cancelled) return;
+        setAccounts(accRes.data);
+        setUsers(usersRes.data);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Calculé directement au rendu — pas de useState ni useEffect
+  const filtered = accounts.filter(a => {
     const q = search.toLowerCase();
-    setFiltered(
-      accounts.filter(a =>
-        a.accountNumber.toLowerCase().includes(q) ||
-        a.ownerName.toLowerCase().includes(q)     ||
-        a.ownerEmail.toLowerCase().includes(q)    ||
-        a.accountType.toLowerCase().includes(q)
-      )
+    return (
+      a.accountNumber.toLowerCase().includes(q) ||
+      a.ownerName.toLowerCase().includes(q)     ||
+      a.ownerEmail.toLowerCase().includes(q)    ||
+      a.accountType.toLowerCase().includes(q)
     );
-  }, [search, accounts]);
+  });
 
   const toggleAccount = async (accountId: number) => {
     const res = await api.put<{ isActive: boolean }>(

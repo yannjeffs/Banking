@@ -17,7 +17,6 @@ const statusConfig: Record<string, { label: string; classes: string }> = {
 
 export default function AdminLoans() {
   const [loans, setLoans]         = useState<AdminLoan[]>([]);
-  const [filtered, setFiltered]   = useState<AdminLoan[]>([]);
   const [statusFilter, setStatus] = useState<string>('all');
   const [loading, setLoading]     = useState<boolean>(true);
   const [actionId, setActionId]   = useState<number | null>(null);
@@ -29,7 +28,6 @@ export default function AdminLoans() {
         const res = await api.get<AdminLoan[]>('/admin/loans');
         if (cancelled) return;
         setLoans(res.data);
-        setFiltered(res.data);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -39,12 +37,24 @@ export default function AdminLoans() {
   }, []);
 
   useEffect(() => {
-    setFiltered(
-      statusFilter === 'all'
-        ? loans
-        : loans.filter(l => l.status === statusFilter)
-    );
-  }, [statusFilter, loans]);
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await api.get<AdminLoan[]>('/admin/loans');
+        if (cancelled) return;
+        setLoans(res.data);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Calculé directement au rendu — pas de useState ni useEffect
+  const filtered = statusFilter === 'all'
+    ? loans
+    : loans.filter(l => l.status === statusFilter);
 
   const approveLoan = async (loanId: number) => {
     setActionId(loanId);
@@ -69,6 +79,30 @@ export default function AdminLoans() {
       setActionId(null);
     }
   };
+
+  /*const approveLoan = async (loanId: number) => {
+    setActionId(loanId);
+    try {
+      await api.put(`/loan/${loanId}/approve`);
+      setLoans(prev =>
+        prev.map(l => l.loanId === loanId ? { ...l, status: 'Actif' } : l)
+      );
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const rejectLoan = async (loanId: number) => {
+    setActionId(loanId);
+    try {
+      await api.put(`/loan/${loanId}/reject`, { reason: 'Rejeté par admin' });
+      setLoans(prev =>
+        prev.map(l => l.loanId === loanId ? { ...l, status: 'Rejete' } : l)
+      );
+    } finally {
+      setActionId(null);
+    }
+  };*/
 
   const fmt = (n: number) => n.toLocaleString('fr-FR');
   const pending = loans.filter(l => l.status === 'En attente').length;
