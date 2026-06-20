@@ -1,11 +1,31 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  CreditCard,
+  ArrowRightLeft,
+  Landmark,
+  LogOut,
+  Building2,
+} from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 const links = [
-  { to: "/dashboard", icon: "🏠", label: "Tableau de bord" },
-  { to: "/accounts", icon: "🏦", label: "Mes comptes" },
-  { to: "/transactions", icon: "💸", label: "Virements" },
-  { to: "/loans", icon: "📋", label: "Prêts" },
+  {
+    to: "/dashboard",
+    icon: <LayoutDashboard className="w-4 h-4" />,
+    label: "Tableau de bord",
+  },
+  {
+    to: "/accounts",
+    icon: <CreditCard className="w-4 h-4" />,
+    label: "Mes comptes",
+  },
+  {
+    to: "/transactions",
+    icon: <ArrowRightLeft className="w-4 h-4" />,
+    label: "Virements",
+  },
+  { to: "/loans", icon: <Landmark className="w-4 h-4" />, label: "Prêts" },
 ];
 
 export default function Sidebar() {
@@ -18,112 +38,65 @@ export default function Sidebar() {
   };
 
   return (
-    <aside style={styles.sidebar}>
-      <div style={styles.brand}>
-        <span style={styles.brandIcon}>🏛</span>
-        <span style={styles.brandName}>E-Banking</span>
-      </div>
-
-      <div style={styles.userInfo}>
-        <div style={styles.avatar}>{user?.fullName?.[0] ?? "U"}</div>
+    <aside className="fixed left-0 top-0 w-60 min-h-screen bg-slate-900 flex flex-col z-10">
+      {/* Brand */}
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-700">
+        <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
+          <Building2 className="w-5 h-5 text-white" />
+        </div>
         <div>
-          <div style={styles.userName}>{user?.fullName}</div>
-          <div style={styles.userRole}>{user?.role}</div>
+          <div className="text-white font-bold text-sm">E-Banking</div>
+          <div className="text-blue-400 text-xs font-medium">Espace Client</div>
         </div>
       </div>
 
-      <nav style={styles.nav}>
+      {/* User info */}
+      <div className="flex items-center gap-3 px-4 py-3 mx-3 mt-4 bg-slate-800 rounded-xl">
+        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0">
+          {user?.fullName?.[0] ?? "U"}
+        </div>
+        <div className="min-w-0">
+          <div className="text-white text-xs font-semibold truncate">
+            {user?.fullName}
+          </div>
+          <div className="text-blue-400 text-xs">{user?.role}</div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex flex-col gap-1 px-3 mt-5 flex-1">
+        <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider px-2 mb-2">
+          Navigation
+        </p>
         {links.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
-            style={({ isActive }) => ({
-              ...styles.link,
-              ...(isActive ? styles.linkActive : {}),
-            })}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+              ${
+                isActive
+                  ? "bg-blue-600 text-white"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
+              }`
+            }
           >
-            <span>{link.icon}</span>
-            <span>{link.label}</span>
+            {link.icon}
+            {link.label}
           </NavLink>
         ))}
       </nav>
 
-      <button style={styles.logout} onClick={handleLogout}>
-        🚪 Déconnexion
-      </button>
+      {/* Logout */}
+      <div className="px-3 pb-5">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
+        >
+          <LogOut className="w-4 h-4" />
+          Déconnexion
+        </button>
+      </div>
     </aside>
   );
 }
-
-const styles = {
-  sidebar: {
-    width: "240px",
-    minHeight: "100vh",
-    background: "#1e3a5f",
-    color: "#fff",
-    display: "flex",
-    flexDirection: "column" as const,
-    padding: "1.5rem 0",
-    position: "fixed" as const,
-    left: 0,
-    top: 0,
-  },
-  brand: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.75rem",
-    padding: "0 1.5rem",
-    marginBottom: "2rem",
-  },
-  brandIcon: { fontSize: "1.8rem" },
-  brandName: { fontSize: "1.3rem", fontWeight: "700", color: "#60a5fa" },
-  userInfo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.75rem",
-    padding: "0.75rem 1.5rem",
-    background: "#243f6a",
-    marginBottom: "1.5rem",
-  },
-  avatar: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "50%",
-    background: "#1a56db",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "700",
-    fontSize: "1.1rem",
-  },
-  userName: { fontWeight: "600", fontSize: "0.9rem" },
-  userRole: { fontSize: "0.75rem", color: "#93c5fd" },
-  nav: {
-    display: "flex",
-    flexDirection: "column" as const,
-    flex: 1,
-    padding: "0 0.75rem",
-    gap: "0.25rem",
-  },
-  link: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.75rem",
-    padding: "0.7rem 0.75rem",
-    borderRadius: "8px",
-    color: "#cbd5e1",
-    textDecoration: "none",
-    fontSize: "0.95rem",
-  },
-  linkActive: { background: "#1a56db", color: "#fff", fontWeight: "600" },
-  logout: {
-    margin: "1rem 0.75rem 0",
-    padding: "0.65rem",
-    background: "transparent",
-    border: "1px solid #475569",
-    borderRadius: "8px",
-    color: "#94a3b8",
-    cursor: "pointer",
-    fontSize: "0.9rem",
-  },
-} satisfies Record<string, React.CSSProperties>;
