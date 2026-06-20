@@ -8,6 +8,7 @@ import {
   Building2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import NotificationBell from "./NotificationBell";
 
 const links = [
   {
@@ -87,8 +88,17 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="px-3 pb-5">
+      {/* Navigation */}
+      <nav className="flex flex-col gap-1 px-3 mt-5 flex-1">
+        {/* ... liens existants ... */}
+      </nav>
+
+      {/* Notifications + Logout */}
+      <div className="px-3 pb-5 flex flex-col gap-2">
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-xs text-slate-400 font-medium">Notifications</span>
+          <NotificationBell />
+        </div>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
