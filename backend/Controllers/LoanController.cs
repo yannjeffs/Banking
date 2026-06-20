@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using backend.Data;
 using backend.Models;
+using backend.Services;
 
 namespace backend.Controllers;
 
@@ -21,10 +22,12 @@ public class LoanRequestDto
 public class LoanController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly NotificationService _notifService;
 
-    public LoanController(AppDbContext context)
+    public LoanController(AppDbContext context, NotificationService notifService)
     {
         _context = context;
+        _notifService = notifService;
     }
 
     // POST api/loan/request — demander un prêt
@@ -119,6 +122,14 @@ public class LoanController : ControllerBase
         });
 
         await _context.SaveChangesAsync();
+
+        await _notifService.NotifyAsync(
+            loan.UserId,
+            "Prêt approuvé 🎉",
+            $"Votre demande de prêt de {loan.Amount:N0} XAF a été approuvée. Les fonds ont été versés sur votre compte {loan.Account.AccountNumber}.",
+            "Pret"
+        );
+
         return Ok(new { message = "Prêt approuvé et fonds versés." });
     }
 
@@ -138,18 +149,18 @@ public class LoanController : ControllerBase
     }
 
     // GET api/loan/all — tous les prêts (Admin)
-[HttpGet("all")]
-[Authorize(Roles = "Admin")]
-public async Task<IActionResult> GetAllLoans()
-{
-    var loans = await _context.Loans
-        .Include(l => l.User)
-        .Include(l => l.Account)
-        .OrderByDescending(l => l.CreatedAt)
-        .ToListAsync();
+    [HttpGet("all")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAllLoans()
+    {
+        var loans = await _context.Loans
+            .Include(l => l.User)
+            .Include(l => l.Account)
+            .OrderByDescending(l => l.CreatedAt)
+            .ToListAsync();
 
-    return Ok(loans);
-}
+        return Ok(loans);
+    }
 
     // --- Helpers ---
     private static decimal CalculateMonthlyPayment(decimal amount, decimal annualRate, int months)

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using backend.Data;
 using backend.Models;
+using backend.Services;
 
 namespace backend.Controllers;
 
@@ -22,10 +23,12 @@ public class TransferDto
 public class TransactionController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly NotificationService _notifService;
 
-    public TransactionController(AppDbContext context)
+    public TransactionController(AppDbContext context, NotificationService notifService)
     {
         _context = context;
+        _notifService = notifService;
     }
 
     // POST api/transaction/transfer — effectuer un virement
@@ -78,6 +81,22 @@ public class TransactionController : ControllerBase
             _context.Transactions.Add(t);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // Notifier l'expéditeur
+            await _notifService.NotifyAsync(
+                userId,
+                "Virement effectué",
+                $"Vous avez envoyé {dto.Amount:N0} XAF vers le compte {toAccount.AccountNumber}.",
+                "Virement"
+            );
+
+            // Notifier le destinataire
+            await _notifService.NotifyAsync(
+                toAccount.UserId,
+                "Virement reçu",
+                $"Vous avez reçu {dto.Amount:N0} XAF sur votre compte {toAccount.AccountNumber}.",
+                "Virement"
+            );
 
             return Ok(new { message = "Virement effectué avec succès.", transactionId = t.TransactionId });
         }

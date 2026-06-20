@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using backend.Data;
 using backend.DTOs;
 using backend.Models;
+using backend.Services;
 
 namespace backend.Controllers;
 
@@ -13,10 +14,12 @@ namespace backend.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly NotificationService _notifService;
 
-    public AdminController(AppDbContext context)
+    public AdminController(AppDbContext context, NotificationService notifService)
     {
         _context = context;
+        _notifService = notifService;
     }
 
     // ══════════════════════════════════════════
@@ -319,6 +322,13 @@ public class AdminController : ControllerBase
         loan.Status = "Rejete";
         await _context.SaveChangesAsync();
 
+        await _notifService.NotifyAsync(
+    loan.UserId,
+    "Prêt rejeté",
+    $"Votre demande de prêt de {loan.Amount:N0} XAF a été rejetée.",
+    "Pret"
+);
+
         return Ok(new { message = $"Prêt #{id} rejeté." });
     }
 
@@ -347,6 +357,14 @@ public class AdminController : ControllerBase
         });
 
         await _context.SaveChangesAsync();
+
+        await _notifService.NotifyAsync(
+            account.UserId,
+            "Dépôt reçu",
+            $"Un dépôt de {dto.Amount:N0} XAF a été effectué sur votre compte {account.AccountNumber}.",
+            "Depot"
+        );
+
         return Ok(new { message = "Dépôt effectué.", newBalance = account.Balance });
     }
 
@@ -375,6 +393,14 @@ public class AdminController : ControllerBase
         });
 
         await _context.SaveChangesAsync();
+
+        await _notifService.NotifyAsync(
+            account.UserId,
+            "Retrait effectué",
+            $"Un retrait de {dto.Amount:N0} XAF a été effectué sur votre compte {account.AccountNumber}.",
+            "Retrait"
+        );
+
         return Ok(new { message = "Retrait effectué.", newBalance = account.Balance });
     }
 }
