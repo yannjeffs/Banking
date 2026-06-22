@@ -118,7 +118,7 @@ export default function AdminAccounts() {
               <CreditCard className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Gestion Comptes</h2>
+              <h2 className="text-2xl font-bold text-slate-800">Gestion des Comptes</h2>
               <p className="text-sm text-gray-500">{accounts.length} compte{accounts.length > 1 ? 's' : ''} au total</p>
             </div>
           </div>

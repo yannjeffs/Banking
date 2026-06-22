@@ -181,7 +181,7 @@ export default function Dashboard() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-800">
-                Bonjour, {user?.fullName?.split(" ")[0]} 👋
+                Bonjour, {user?.fullName?.split(" ")[0]}
               </h2>
               <p className="text-sm text-gray-500">
                 Voici un résumé de votre activité

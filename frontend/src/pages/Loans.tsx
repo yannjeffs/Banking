@@ -1,18 +1,8 @@
-import { useEffect, useState } from "react";
-import {
-  Landmark,
-  Plus,
-  X,
-  TrendingUp,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  ChevronDown,
-  AlertCircle,
-  ReceiptText,
-  Wallet,
-  Info,
+import { useEffect, useState, type ReactNode } from "react";
+import { Landmark, Plus, X, TrendingUp,
+  Calendar, CheckCircle2, Clock, XCircle,
+  ChevronDown, AlertCircle, ReceiptText,
+  Wallet, Info,
 } from "lucide-react";
 import api from "../api/axios";
 import Sidebar from "../components/Sidebar";
@@ -49,7 +39,7 @@ interface LoanLimits {
 
 const statusConfig: Record<
   string,
-  { label: string; icon: JSX.Element; classes: string }
+  { label: string; icon: ReactNode; classes: string }
 > = {
   "En attente": {
     label: "En attente",
