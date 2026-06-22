@@ -42,6 +42,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<SmsService>();
 
 var app = builder.Build();
 

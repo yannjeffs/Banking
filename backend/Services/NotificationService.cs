@@ -12,47 +12,62 @@ public class NotificationService
     private readonly AppDbContext _context;
     private readonly IConfiguration _config;
     private readonly ILogger<NotificationService> _logger;
+    private readonly SmsService _smsService;
 
     public NotificationService(
         AppDbContext context,
         IConfiguration config,
-        ILogger<NotificationService> logger)
+        ILogger<NotificationService> logger,
+        SmsService smsService)
     {
         _context = context;
-        _config  = config;
-        _logger  = logger;
+        _config = config;
+        _logger = logger;
+        _smsService = smsService;
     }
 
     // ═══════════════════════════════════════
     // Méthode principale : notifie un utilisateur
-    // (in-app + email automatiquement)
+    // (in-app + email automatiquement + SMS)
     // ═══════════════════════════════════════
     public async Task NotifyAsync(
         int userId,
         string title,
         string message,
         string type,
-        bool sendEmail = true)
+        bool sendEmail = true,
+        bool sendSms = true)
     {
-        // 1. Toujours créer la notification in-app
+        // 1. Notification in-app
         var notification = new Notification
         {
-            UserId  = userId,
-            Title   = title,
+            UserId = userId,
+            Title = title,
             Message = message,
-            Type    = type,
+            Type = type,
         };
         _context.Notifications.Add(notification);
         await _context.SaveChangesAsync();
 
-        // 2. Envoyer l'email si demandé
+        // 2. Récupérer l'utilisateur une seule fois
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null) return;
+
+        // 3. Email
         if (sendEmail)
         {
-            var user = await _context.Users.FindAsync(userId);
-            if (user != null)
-            {
-                await SendEmailAsync(user.Email, user.FirstName, title, message);
-            }
+            await SendEmailAsync(user.Email, user.FirstName, title, message);
+        }
+
+        // 4. SMS
+        if (sendSms && !string.IsNullOrWhiteSpace(user.Phone))
+        {
+            var smsText = $"{title} - {message}";
+            // Limiter à 160 caractères (norme SMS standard)
+            if (smsText.Length > 160)
+                smsText = smsText[..157] + "...";
+
+            await _smsService.SendSmsAsync(user.Phone, smsText);
         }
     }
 
@@ -63,11 +78,15 @@ public class NotificationService
     {
         try
         {
+            var fromName = _config["Email:FromName"] ?? "E-Banking";
+            var fromEmail = _config["Email:FromEmail"] ?? "no-reply@ebanking.cm";
+            var host = _config["Email:Host"] ?? "sandbox.smtp.mailtrap.io";
+            var port = int.Parse(_config["Email:Port"] ?? "2525");
+            var username = _config["Email:Username"] ?? string.Empty;
+            var password = _config["Email:Password"] ?? string.Empty;
+
             var email = new MimeMessage();
-            email.From.Add(new MailboxAddress(
-                _config["Email:FromName"],
-                _config["Email:FromEmail"]
-            ));
+            email.From.Add(new MailboxAddress(fromName, fromEmail));
             email.To.Add(new MailboxAddress(toName, toEmail));
             email.Subject = subject;
 
@@ -77,22 +96,15 @@ public class NotificationService
             };
 
             using var smtp = new SmtpClient();
-            await smtp.ConnectAsync(
-                _config["Email:Host"],
-                int.Parse(_config["Email:Port"]!),
-                SecureSocketOptions.StartTls
-            );
-            await smtp.AuthenticateAsync(
-                _config["Email:Username"],
-                _config["Email:Password"]
-            );
+            await smtp.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(username, password);
             await smtp.SendAsync(email);
             await smtp.DisconnectAsync(true);
         }
         catch (Exception ex)
         {
-            // On log l'erreur mais on ne bloque jamais l'opération bancaire
-            // à cause d'un email qui échoue
+            // On log l'erreur mais ne bloque pas une opération bancaire
+            // à cause d'un email qui n'arrive pas
             _logger.LogError(ex, "Échec de l'envoi d'email à {Email}", toEmail);
         }
     }
