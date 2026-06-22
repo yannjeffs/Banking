@@ -23,11 +23,13 @@ public class LoanController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly NotificationService _notifService;
+    private readonly BankSettingsService _settingsService;
 
-    public LoanController(AppDbContext context, NotificationService notifService)
+    public LoanController(AppDbContext context, NotificationService notifService, BankSettingsService settingsService)
     {
         _context = context;
         _notifService = notifService;
+        _settingsService = settingsService;
     }
 
     // POST api/loan/request — demander un prêt
@@ -41,6 +43,50 @@ public class LoanController : ControllerBase
 
         if (account == null)
             return BadRequest(new { message = "Compte introuvable." });
+
+        // ── Récupérer les limites depuis BankSettings ──
+        var maxAmount = await _settingsService.GetDecimalAsync("LoanMaxAmount", 5000000);
+        var minAmount = await _settingsService.GetDecimalAsync("LoanMinAmount", 50000);
+        var maxActive = await _settingsService.GetIntAsync("LoanMaxActive", 3);
+        var maxTermMonths = await _settingsService.GetIntAsync("LoanMaxTermMonths", 60);
+        var minTermMonths = await _settingsService.GetIntAsync("LoanMinTermMonths", 3);
+
+        // ── Validation montant ──
+        if (dto.Amount < minAmount)
+            return BadRequest(new
+            {
+                message = $"Le montant minimum d'un prêt est de {minAmount:N0} XAF."
+            });
+
+        if (dto.Amount > maxAmount)
+            return BadRequest(new
+            {
+                message = $"Le montant maximum d'un prêt est de {maxAmount:N0} XAF."
+            });
+
+        // ── Validation durée ──
+        if (dto.TermMonths < minTermMonths)
+            return BadRequest(new
+            {
+                message = $"La durée minimum d'un prêt est de {minTermMonths} mois."
+            });
+
+        if (dto.TermMonths > maxTermMonths)
+            return BadRequest(new
+            {
+                message = $"La durée maximum d'un prêt est de {maxTermMonths} mois."
+            });
+
+        // ── Validation nombre de prêts actifs ──
+        var activeLoansCount = await _context.Loans
+            .CountAsync(l => l.UserId == userId
+                          && (l.Status == "Actif" || l.Status == "En attente"));
+
+        if (activeLoansCount >= maxActive)
+            return BadRequest(new
+            {
+                message = $"Vous avez atteint la limite de {maxActive} prêts actifs simultanés."
+            });
 
         var monthlyPayment = CalculateMonthlyPayment(dto.Amount, dto.InterestRate, dto.TermMonths);
 
@@ -88,6 +134,22 @@ public class LoanController : ControllerBase
             .ToListAsync();
 
         return Ok(loans);
+    }
+
+    // GET api/loan/limits — limites publiques pour le formulaire client
+    [HttpGet("limits")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetLimits(
+        [FromServices] BankSettingsService settingsService)
+    {
+        return Ok(new
+        {
+            maxAmount = await settingsService.GetDecimalAsync("LoanMaxAmount", 5000000),
+            minAmount = await settingsService.GetDecimalAsync("LoanMinAmount", 50000),
+            maxActive = await settingsService.GetIntAsync("LoanMaxActive", 3),
+            maxTermMonths = await settingsService.GetIntAsync("LoanMaxTermMonths", 60),
+            minTermMonths = await settingsService.GetIntAsync("LoanMinTermMonths", 3),
+        });
     }
 
     // PUT api/loan/{id}/approve — approuver (Admin)

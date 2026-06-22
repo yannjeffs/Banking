@@ -8,6 +8,7 @@ import {
   LogOut,
   Building2,
   PiggyBank,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import NotificationBell from "./NotificationBell";
@@ -42,6 +43,11 @@ const links = [
     to: "/admin/deposits",
     icon: <PiggyBank className="w-4 h-4" />,
     label: "Dépôts/Retraits",
+  },
+  {
+    to: "/admin/settings",
+    icon: <Settings className="w-4 h-4" />,
+    label: "Paramètres",
   },
 ];
 
@@ -107,7 +113,9 @@ export default function AdminSidebar() {
       {/* Notifications + Logout */}
       <div className="px-3 pb-5 flex flex-col gap-2">
         <div className="flex items-center justify-between px-3 py-2">
-          <span className="text-xs text-slate-400 font-medium">Notifications</span>
+          <span className="text-xs text-slate-400 font-medium">
+            Notifications
+          </span>
           <NotificationBell />
         </div>
         <button

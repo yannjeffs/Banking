@@ -1,130 +1,191 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
-  Landmark, Plus, X, TrendingUp, Calendar,
-  CheckCircle2, Clock, XCircle, ChevronDown,
-  AlertCircle, ReceiptText, Wallet, Info
-} from 'lucide-react';
-import api from '../api/axios';
-import Sidebar from '../components/Sidebar';
-import type { Account, Loan } from '../types';
+  Landmark,
+  Plus,
+  X,
+  TrendingUp,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  ChevronDown,
+  AlertCircle,
+  ReceiptText,
+  Wallet,
+  Info,
+} from "lucide-react";
+import api from "../api/axios";
+import Sidebar from "../components/Sidebar";
+import type { Account, Loan } from "../types";
 
 interface LoanRequestForm {
-  accountId:    number | '';
-  amount:       number | '';
-  interestRate: number | '';
-  termMonths:   number | '';
+  accountId: number | "";
+  amount: number | "";
+  interestRate: number | "";
+  termMonths: number | "";
 }
 
 interface LoanRequestResponse {
-  message:        string;
-  loanId:         number;
+  message: string;
+  loanId: number;
   monthlyPayment: number;
 }
 
 interface AmortizationRow {
-  month:            number;
-  payment:          number;
-  principalPaid:    number;
-  interestPaid:     number;
+  month: number;
+  payment: number;
+  principalPaid: number;
+  interestPaid: number;
   remainingBalance: number;
 }
 
-const statusConfig: Record<string, { label: string; icon: JSX.Element; classes: string }> = {
-  'En attente': {
-    label:   'En attente',
-    icon:    <Clock className="w-3.5 h-3.5" />,
-    classes: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+interface LoanLimits {
+  maxAmount: number;
+  minAmount: number;
+  maxActive: number;
+  maxTermMonths: number;
+  minTermMonths: number;
+}
+
+const statusConfig: Record<
+  string,
+  { label: string; icon: JSX.Element; classes: string }
+> = {
+  "En attente": {
+    label: "En attente",
+    icon: <Clock className="w-3.5 h-3.5" />,
+    classes: "bg-yellow-50 text-yellow-700 border-yellow-200",
   },
-  'Actif': {
-    label:   'Actif',
-    icon:    <CheckCircle2 className="w-3.5 h-3.5" />,
-    classes: 'bg-green-50 text-green-700 border-green-200',
+  Actif: {
+    label: "Actif",
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    classes: "bg-green-50 text-green-700 border-green-200",
   },
-  'Rembourse': {
-    label:   'Remboursé',
-    icon:    <CheckCircle2 className="w-3.5 h-3.5" />,
-    classes: 'bg-blue-50 text-blue-700 border-blue-200',
+  Rembourse: {
+    label: "Remboursé",
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    classes: "bg-blue-50 text-blue-700 border-blue-200",
   },
-  'Rejete': {
-    label:   'Rejeté',
-    icon:    <XCircle className="w-3.5 h-3.5" />,
-    classes: 'bg-red-50 text-red-700 border-red-200',
+  Rejete: {
+    label: "Rejeté",
+    icon: <XCircle className="w-3.5 h-3.5" />,
+    classes: "bg-red-50 text-red-700 border-red-200",
   },
-  'Approuve': {
-    label:   'Approuvé',
-    icon:    <CheckCircle2 className="w-3.5 h-3.5" />,
-    classes: 'bg-teal-50 text-teal-700 border-teal-200',
+  Approuve: {
+    label: "Approuvé",
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    classes: "bg-teal-50 text-teal-700 border-teal-200",
   },
 };
 
 // Calcul mensualité côté front (pour aperçu avant envoi)
-const calcMonthlyPayment = (amount: number, rate: number, months: number): number => {
+const calcMonthlyPayment = (
+  amount: number,
+  rate: number,
+  months: number,
+): number => {
   if (rate === 0) return amount / months;
   const r = rate / 100 / 12;
   return (amount * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
 };
 
 export default function Loans() {
-  const [loans, setLoans]               = useState<Loan[]>([]);
-  const [accounts, setAccounts]         = useState<Account[]>([]);
-  const [showForm, setShowForm]         = useState<boolean>(false);
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [showForm, setShowForm] = useState<boolean>(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
-  const [schedule, setSchedule]         = useState<AmortizationRow[]>([]);
+  const [schedule, setSchedule] = useState<AmortizationRow[]>([]);
   const [loadingLoans, setLoadingLoans] = useState<boolean>(true);
   const [loadingSched, setLoadingSched] = useState<boolean>(false);
-  const [loadingForm, setLoadingForm]   = useState<boolean>(false);
-  const [success, setSuccess]           = useState<string>('');
-  const [error, setError]               = useState<string>('');
+  const [loadingForm, setLoadingForm] = useState<boolean>(false);
+  const [success, setSuccess] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   const [form, setForm] = useState<LoanRequestForm>({
-    accountId:    '',
-    amount:       '',
-    interestRate: '',
-    termMonths:   '',
+    accountId: "",
+    amount: "",
+    interestRate: "",
+    termMonths: "",
+  });
+
+  // Dans le composant Loans
+  const [limits, setLimits] = useState<LoanLimits>({
+    maxAmount: 5000000,
+    minAmount: 50000,
+    maxActive: 3,
+    maxTermMonths: 60,
+    minTermMonths: 3,
   });
 
   useEffect(() => {
-    Promise.all([
-      api.get<Loan[]>('/loan'),
-      api.get<Account[]>('/account'),
-    ]).then(([loanRes, accRes]) => {
-      setLoans(loanRes.data);
-      setAccounts(accRes.data);
-      if (accRes.data.length > 0)
-        setForm(f => ({ ...f, accountId: accRes.data[0].accountId }));
-    }).finally(() => setLoadingLoans(false));
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const [loanRes, accRes, limitsRes] = await Promise.all([
+          api.get<Loan[]>("/loan"),
+          api.get<Account[]>("/account"),
+          api.get<{
+            maxAmount: number;
+            minAmount: number;
+            maxActive: number;
+            maxTermMonths: number;
+            minTermMonths: number;
+          }>("/loan/limits"),
+        ]);
+
+        if (cancelled) return;
+
+        setLoans(loanRes.data);
+        setAccounts(accRes.data);
+        setLimits(limitsRes.data);
+
+        if (accRes.data.length > 0)
+          setForm((f) => ({ ...f, accountId: accRes.data[0].accountId }));
+      } finally {
+        if (!cancelled) setLoadingLoans(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: name === 'accountId' ? Number(value) : value }));
+    setForm((f) => ({
+      ...f,
+      [name]: name === "accountId" ? Number(value) : value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingForm(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     try {
-      const res = await api.post<LoanRequestResponse>('/loan/request', {
-        accountId:    Number(form.accountId),
-        amount:       Number(form.amount),
+      const res = await api.post<LoanRequestResponse>("/loan/request", {
+        accountId: Number(form.accountId),
+        amount: Number(form.amount),
         interestRate: Number(form.interestRate),
-        termMonths:   Number(form.termMonths),
+        termMonths: Number(form.termMonths),
       });
       setSuccess(
-        `Demande soumise ! Mensualité estimée : ${res.data.monthlyPayment.toLocaleString('fr-FR')} XAF`
+        `Demande soumise ! Mensualité estimée : ${res.data.monthlyPayment.toLocaleString("fr-FR")} XAF`,
       );
       // Rafraîchir la liste
-      api.get<Loan[]>('/loan').then(r => setLoans(r.data));
+      api.get<Loan[]>("/loan").then((r) => setLoans(r.data));
       setShowForm(false);
-      setForm(f => ({ ...f, amount: '', interestRate: '', termMonths: '' }));
+      setForm((f) => ({ ...f, amount: "", interestRate: "", termMonths: "" }));
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message;
-      setError(message || 'Erreur lors de la demande.');
+      setError(message || "Erreur lors de la demande.");
     } finally {
       setLoadingForm(false);
     }
@@ -139,7 +200,9 @@ export default function Loans() {
     setSelectedLoan(loan);
     setLoadingSched(true);
     try {
-      const res = await api.get<AmortizationRow[]>(`/loan/${loan.loanId}/schedule`);
+      const res = await api.get<AmortizationRow[]>(
+        `/loan/${loan.loanId}/schedule`,
+      );
       setSchedule(res.data);
     } finally {
       setLoadingSched(false);
@@ -147,24 +210,22 @@ export default function Loans() {
   };
 
   // Aperçu mensualité en temps réel
-  const preview = (
+  const preview =
     form.amount && form.interestRate && form.termMonths
       ? calcMonthlyPayment(
           Number(form.amount),
           Number(form.interestRate),
-          Number(form.termMonths)
+          Number(form.termMonths),
         )
-      : null
-  );
+      : null;
 
-  const fmt = (n: number) => n.toLocaleString('fr-FR');
+  const fmt = (n: number) => n.toLocaleString("fr-FR");
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
 
       <main className="ml-60 flex-1 p-8">
-
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -173,21 +234,33 @@ export default function Loans() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-800">Prêts</h2>
-              <p className="text-sm text-gray-500">Gérez vos demandes de prêt</p>
+              <p className="text-sm text-gray-500">
+                Gérez vos demandes de prêt
+              </p>
             </div>
           </div>
           <button
-            onClick={() => { setShowForm(f => !f); setError(''); setSuccess(''); }}
+            onClick={() => {
+              setShowForm((f) => !f);
+              setError("");
+              setSuccess("");
+            }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all
-              ${showForm
-                ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+              ${
+                showForm
+                  ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
               }`}
           >
-            {showForm
-              ? <><X className="w-4 h-4" /> Annuler</>
-              : <><Plus className="w-4 h-4" /> Demander un prêt</>
-            }
+            {showForm ? (
+              <>
+                <X className="w-4 h-4" /> Annuler
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" /> Demander un prêt
+              </>
+            )}
           </button>
         </div>
 
@@ -206,7 +279,6 @@ export default function Loans() {
         )}
 
         <div className="flex flex-col gap-6">
-
           {/* ── Formulaire de demande ── */}
           {showForm && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -215,9 +287,10 @@ export default function Loans() {
                 Nouvelle demande de prêt
               </h3>
 
-              <form onSubmit={handleSubmit}
-                className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
+              <form
+                onSubmit={handleSubmit}
+                className="grid grid-cols-1 md:grid-cols-2 gap-5"
+              >
                 {/* Compte de versement */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -230,7 +303,7 @@ export default function Loans() {
                       onChange={handleChange}
                       className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      {accounts.map(a => (
+                      {accounts.map((a) => (
                         <option key={a.accountId} value={a.accountId}>
                           {a.accountType} — {a.accountNumber}
                         </option>
@@ -250,8 +323,9 @@ export default function Loans() {
                     <input
                       name="amount"
                       type="number"
-                      min="1"
-                      placeholder="500 000"
+                      min={limits.minAmount}
+                      max={limits.maxAmount}
+                      placeholder={`${limits.minAmount.toLocaleString("fr-FR")} - ${limits.maxAmount.toLocaleString("fr-FR")}`}
                       value={form.amount}
                       onChange={handleChange}
                       required
@@ -310,10 +384,14 @@ export default function Loans() {
                     <p className="text-sm text-blue-700">
                       Mensualité estimée :
                       <span className="font-bold ml-1">
-                        {Math.round(preview).toLocaleString('fr-FR')} XAF / mois
+                        {Math.round(preview).toLocaleString("fr-FR")} XAF / mois
                       </span>
                       <span className="text-blue-500 ml-1">
-                        · Total : {Math.round(preview * Number(form.termMonths)).toLocaleString('fr-FR')} XAF
+                        · Total :{" "}
+                        {Math.round(
+                          preview * Number(form.termMonths),
+                        ).toLocaleString("fr-FR")}{" "}
+                        XAF
                       </span>
                     </p>
                   </div>
@@ -352,7 +430,7 @@ export default function Loans() {
               </h3>
               {loans.length > 0 && (
                 <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">
-                  {loans.length} prêt{loans.length > 1 ? 's' : ''}
+                  {loans.length} prêt{loans.length > 1 ? "s" : ""}
                 </span>
               )}
             </div>
@@ -368,15 +446,15 @@ export default function Loans() {
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {loans.map(loan => {
-                  const cfg = statusConfig[loan.status] ?? statusConfig['En attente'];
+                {loans.map((loan) => {
+                  const cfg =
+                    statusConfig[loan.status] ?? statusConfig["En attente"];
                   const isSelected = selectedLoan?.loanId === loan.loanId;
 
                   return (
                     <div key={loan.loanId}>
                       {/* Ligne du prêt */}
                       <div className="flex flex-wrap items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
-
                         {/* Icône */}
                         <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
                           <Landmark className="w-5 h-5 text-blue-600" />
@@ -388,7 +466,9 @@ export default function Loans() {
                             <span className="font-semibold text-slate-800">
                               {fmt(loan.amount)} XAF
                             </span>
-                            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${cfg.classes}`}>
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${cfg.classes}`}
+                            >
                               {cfg.icon}
                               {cfg.label}
                             </span>
@@ -413,13 +493,14 @@ export default function Loans() {
                         <button
                           onClick={() => viewSchedule(loan)}
                           className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all
-                            ${isSelected
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'
+                            ${
+                              isSelected
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
                             }`}
                         >
                           <ReceiptText className="w-3.5 h-3.5" />
-                          {isSelected ? 'Masquer' : 'Amortissement'}
+                          {isSelected ? "Masquer" : "Amortissement"}
                         </button>
                       </div>
 
@@ -439,17 +520,29 @@ export default function Loans() {
                               <table className="w-full text-xs">
                                 <thead>
                                   <tr className="bg-gray-100 text-gray-600">
-                                    <th className="px-4 py-2.5 text-left font-semibold">Mois</th>
-                                    <th className="px-4 py-2.5 text-right font-semibold">Mensualité</th>
-                                    <th className="px-4 py-2.5 text-right font-semibold">Capital</th>
-                                    <th className="px-4 py-2.5 text-right font-semibold">Intérêts</th>
-                                    <th className="px-4 py-2.5 text-right font-semibold">Reste dû</th>
+                                    <th className="px-4 py-2.5 text-left font-semibold">
+                                      Mois
+                                    </th>
+                                    <th className="px-4 py-2.5 text-right font-semibold">
+                                      Mensualité
+                                    </th>
+                                    <th className="px-4 py-2.5 text-right font-semibold">
+                                      Capital
+                                    </th>
+                                    <th className="px-4 py-2.5 text-right font-semibold">
+                                      Intérêts
+                                    </th>
+                                    <th className="px-4 py-2.5 text-right font-semibold">
+                                      Reste dû
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-50">
-                                  {schedule.map(row => (
-                                    <tr key={row.month}
-                                      className="hover:bg-blue-50 transition-colors">
+                                  {schedule.map((row) => (
+                                    <tr
+                                      key={row.month}
+                                      className="hover:bg-blue-50 transition-colors"
+                                    >
                                       <td className="px-4 py-2.5 font-medium text-slate-700">
                                         {row.month}
                                       </td>

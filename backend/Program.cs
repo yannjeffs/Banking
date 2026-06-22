@@ -44,6 +44,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<SmsService>();
+builder.Services.AddScoped<BankSettingsService>();
 
 var app = builder.Build();
 

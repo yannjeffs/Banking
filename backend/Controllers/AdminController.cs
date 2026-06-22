@@ -15,11 +15,32 @@ public class AdminController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly NotificationService _notifService;
+    private readonly BankSettingsService _settingsService;
 
-    public AdminController(AppDbContext context, NotificationService notifService)
+    public AdminController(AppDbContext context, NotificationService notifService, BankSettingsService settingsService)
     {
         _context = context;
         _notifService = notifService;
+        _settingsService = settingsService;
+    }
+
+    // GET api/admin/settings
+    [HttpGet("settings")]
+    public async Task<IActionResult> GetSettings()
+    {
+        var settings = await _settingsService.GetAllAsync();
+        return Ok(settings);
+    }
+
+    // PUT api/admin/settings/{key}
+    [HttpPut("settings/{key}")]
+    public async Task<IActionResult> UpdateSetting(string key, [FromBody] UpdateSettingDto dto)
+    {
+        var updated = await _settingsService.UpdateAsync(key, dto.Value);
+        if (!updated)
+            return NotFound(new { message = $"Paramètre '{key}' introuvable." });
+
+        return Ok(new { message = "Paramètre mis à jour avec succès." });
     }
 
     // ══════════════════════════════════════════

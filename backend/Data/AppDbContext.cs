@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Loan> Loans { get; set; }
     public DbSet<LoanPayment> LoanPayments { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<BankSetting> BankSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

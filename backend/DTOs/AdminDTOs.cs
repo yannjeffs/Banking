@@ -12,6 +12,11 @@ public class AdminStatsDto
     public int     TotalTransactions { get; set; }
 }
 
+public class UpdateSettingDto
+{
+    public string Value { get; set; } = string.Empty;
+}
+
 public class AdminUserDto
 {
     public int      UserId    { get; set; }

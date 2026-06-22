@@ -18,6 +18,7 @@ import AdminAccounts from "./pages/admin/AdminAccounts";
 import AdminLoans from "./pages/admin/AdminLoans";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminDeposits from "./pages/admin/AdminDeposits";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 export default function App() {
   return (
@@ -108,6 +109,14 @@ export default function App() {
             element={
               <AdminRoute>
                 <AdminDeposits />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <AdminRoute>
+                <AdminSettings />
               </AdminRoute>
             }
           />
