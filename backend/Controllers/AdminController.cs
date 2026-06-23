@@ -5,12 +5,14 @@ using backend.Data;
 using backend.DTOs;
 using backend.Models;
 using backend.Services;
+using System.Security.Claims;
 
 namespace backend.Controllers;
 
+// En haut du contrôleur — accès global Admin + Superviseur (lecture)
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = Roles.StaffRoles)]
 public class AdminController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -24,16 +26,18 @@ public class AdminController : ControllerBase
         _settingsService = settingsService;
     }
 
-    // GET api/admin/settings
+    // GET api/admin/settings — Admin uniquement
     [HttpGet("settings")]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> GetSettings()
     {
         var settings = await _settingsService.GetAllAsync();
         return Ok(settings);
     }
 
-    // PUT api/admin/settings/{key}
+    // PUT api/admin/settings/{key} — Admin uniquement
     [HttpPut("settings/{key}")]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> UpdateSetting(string key, [FromBody] UpdateSettingDto dto)
     {
         var updated = await _settingsService.UpdateAsync(key, dto.Value);
@@ -45,9 +49,10 @@ public class AdminController : ControllerBase
 
     // ══════════════════════════════════════════
     // STATISTIQUES GLOBALES
-    // GET api/admin/stats
     // ══════════════════════════════════════════
+    // GET api/admin/stats — Admin + Superviseur + Auditeur
     [HttpGet("stats")]
+    [Authorize(Roles = Roles.CanViewAll)]
     public async Task<IActionResult> GetStats()
     {
         var totalUsers = await _context.Users.CountAsync(u => u.Role == "Client");
@@ -76,9 +81,10 @@ public class AdminController : ControllerBase
 
     // ══════════════════════════════════════════
     // GESTION CLIENTS
-    // GET api/admin/users
     // ══════════════════════════════════════════
+    // GET api/admin/users — Admin + Superviseur + GestionnaireComptes
     [HttpGet("users")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Superviseur},{Roles.GestionnaireComptes}")]
     public async Task<IActionResult> GetAllUsers()
     {
         var users = await _context.Users
@@ -141,8 +147,9 @@ public class AdminController : ControllerBase
         });
     }
 
-    // PUT api/admin/users/{id}/toggle
+    // PUT api/admin/users/{id}/toggle — Admin + GestionnaireComptes
     [HttpPut("users/{id}/toggle")]
+    [Authorize(Roles = Roles.CanManageAccounts)]
     public async Task<IActionResult> ToggleUser(int id)
     {
         var user = await _context.Users.FindAsync(id);
@@ -180,7 +187,9 @@ public class AdminController : ControllerBase
     // GESTION COMPTES
     // GET api/admin/accounts
     // ══════════════════════════════════════════
+    // GET api/admin/accounts — Admin + Superviseur + GestionnaireComptes
     [HttpGet("accounts")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Superviseur},{Roles.GestionnaireComptes}")]
     public async Task<IActionResult> GetAllAccounts()
     {
         var accounts = await _context.Accounts
@@ -203,8 +212,9 @@ public class AdminController : ControllerBase
         return Ok(accounts);
     }
 
-    // POST api/admin/accounts — créer un compte pour un client
+    // POST api/admin/accounts — Admin + GestionnaireComptes
     [HttpPost("accounts")]
+    [Authorize(Roles = Roles.CanManageAccounts)]
     public async Task<IActionResult> CreateAccount(CreateAccountDto dto)
     {
         var user = await _context.Users.FindAsync(dto.UserId);
@@ -230,8 +240,9 @@ public class AdminController : ControllerBase
         });
     }
 
-    // PUT api/admin/accounts/{id}/toggle
+    // PUT api/admin/accounts/{id}/toggle — Admin + GestionnaireComptes
     [HttpPut("accounts/{id}/toggle")]
+    [Authorize(Roles = Roles.CanManageAccounts)]
     public async Task<IActionResult> ToggleAccount(int id)
     {
         var account = await _context.Accounts.FindAsync(id);
@@ -250,9 +261,10 @@ public class AdminController : ControllerBase
 
     // ══════════════════════════════════════════
     // TRANSACTIONS GLOBALES
-    // GET api/admin/transactions
+    // GET api/admin/transactions — Admin + Superviseur + Auditeur + Caissier
     // ══════════════════════════════════════════
     [HttpGet("transactions")]
+    [Authorize(Roles = $"{Roles.CanViewAll},{Roles.Caissier}")]
     public async Task<IActionResult> GetAllTransactions(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
@@ -294,9 +306,10 @@ public class AdminController : ControllerBase
 
     // ══════════════════════════════════════════
     // GESTION PRÊTS
-    // GET api/admin/loans
+    // GET api/admin/loans — Admin + Superviseur + AgentCredit
     // ══════════════════════════════════════════
     [HttpGet("loans")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Superviseur},{Roles.AgentCredit}")]
     public async Task<IActionResult> GetAllLoans([FromQuery] string? status = null)
     {
         var query = _context.Loans
@@ -329,8 +342,9 @@ public class AdminController : ControllerBase
         return Ok(loans);
     }
 
-    // PUT api/admin/loans/{id}/reject
+    // PUT api/admin/loans/{id}/reject — Admin + AgentCredit
     [HttpPut("loans/{id}/reject")]
+    [Authorize(Roles = Roles.CanManageLoans)]
     public async Task<IActionResult> RejectLoan(int id, [FromBody] RejectLoanDto dto)
     {
         var loan = await _context.Loans.FindAsync(id);
@@ -355,9 +369,10 @@ public class AdminController : ControllerBase
 
     // ══════════════════════════════════════════
     // DÉPÔTS & RETRAITS
-    // POST api/admin/deposit
+    // POST api/admin/deposit — Admin + Caissier
     // ══════════════════════════════════════════
     [HttpPost("deposit")]
+    [Authorize(Roles = Roles.CanDeposit)]
     public async Task<IActionResult> Deposit(DepositWithdrawDto dto)
     {
         var account = await _context.Accounts
@@ -389,8 +404,9 @@ public class AdminController : ControllerBase
         return Ok(new { message = "Dépôt effectué.", newBalance = account.Balance });
     }
 
-    // POST api/admin/withdraw
+    // POST api/admin/withdraw — Admin + Caissier
     [HttpPost("withdraw")]
+    [Authorize(Roles = Roles.CanDeposit)]
     public async Task<IActionResult> Withdraw(DepositWithdrawDto dto)
     {
         var account = await _context.Accounts
@@ -424,4 +440,71 @@ public class AdminController : ControllerBase
 
         return Ok(new { message = "Retrait effectué.", newBalance = account.Balance });
     }
+
+    // ══════════════════════════════════════════
+// GESTION DES RÔLES
+// GET api/admin/staff — liste du personnel (non-clients)
+// ══════════════════════════════════════════
+[HttpGet("staff")]
+[Authorize(Roles = Roles.CanAssignRoles)]
+public async Task<IActionResult> GetStaff()
+{
+    var staff = await _context.Users
+        .Where(u => u.Role != Roles.Client)
+        .OrderBy(u => u.Role)
+        .Select(u => new StaffUserDto
+        {
+            UserId    = u.UserId,
+            FullName  = u.FirstName + " " + u.LastName,
+            Email     = u.Email,
+            Phone     = u.Phone,
+            Role      = u.Role,
+            IsActive  = u.IsActive,
+            CreatedAt = u.CreatedAt,
+        })
+        .ToListAsync();
+
+    return Ok(staff);
+}
+
+// PUT api/admin/users/{id}/assign-role
+[HttpPut("users/{id}/assign-role")]
+[Authorize(Roles = Roles.CanAssignRoles)]
+public async Task<IActionResult> AssignRole(int id, [FromBody] AssignRoleDto dto)
+{
+    // Valider que le rôle demandé est valide
+    var validRoles = new[]
+    {
+        Roles.Admin, Roles.Superviseur, Roles.GestionnaireComptes,
+        Roles.AgentCredit, Roles.Caissier, Roles.Auditeur, Roles.Client
+    };
+
+    if (!validRoles.Contains(dto.Role))
+        return BadRequest(new { message = $"Rôle '{dto.Role}' invalide." });
+
+    var user = await _context.Users.FindAsync(id);
+    if (user == null)
+        return NotFound(new { message = "Utilisateur introuvable." });
+
+    // Un Superviseur ne peut pas promouvoir Admin
+    var currentRole = User.FindFirstValue(ClaimTypes.Role);
+    if (currentRole == Roles.Superviseur && dto.Role == Roles.Admin)
+        return Forbid();
+
+    var oldRole = user.Role;
+    user.Role = dto.Role;
+    await _context.SaveChangesAsync();
+
+    // Notifier l'utilisateur
+    await _notifService.NotifyAsync(
+        user.UserId,
+        "Rôle mis à jour",
+        $"Votre rôle a été modifié de '{oldRole}' à '{dto.Role}'.",
+        "Systeme"
+    );
+
+    return Ok(new {
+        message = $"Rôle de {user.FirstName} {user.LastName} mis à jour : {dto.Role}."
+    });
+}
 }

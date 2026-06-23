@@ -152,9 +152,9 @@ public class LoanController : ControllerBase
         });
     }
 
-    // PUT api/loan/{id}/approve — approuver (Admin)
+    // PUT api/loan/{id}/approve — Admin + AgentCredit
     [HttpPut("{id}/approve")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.CanManageLoans)]
     public async Task<IActionResult> ApproveLoan(int id)
     {
         var loan = await _context.Loans
@@ -212,7 +212,7 @@ public class LoanController : ControllerBase
 
     // GET api/loan/all — tous les prêts (Admin)
     [HttpGet("all")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.CanManageLoans)]
     public async Task<IActionResult> GetAllLoans()
     {
         var loans = await _context.Loans

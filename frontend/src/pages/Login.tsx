@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate, Link, Navigate } from "react-router-dom";
 import api from "../api/axios";
-import type { AuthResponse } from "../types";
+import type { AuthResponse, UserRole } from "../types";
 import { useAuth } from "../hooks/useAuth";
+import { StaffRoles } from "../utils/permissions";
 
 interface LoginForm {
   email: string;
@@ -44,7 +45,8 @@ export default function Login() {
       );
 
       // Redirection conditionnelle selon le rôle
-      navigate(res.data.role === "Admin" ? "/admin/dashboard" : "/dashboard");
+      const role = res.data.role as UserRole;
+      navigate(StaffRoles.includes(role) ? "/admin/dashboard" : "/dashboard");
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message;

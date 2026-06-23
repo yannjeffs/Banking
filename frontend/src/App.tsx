@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthProvider";
 import PrivateRoute from "./components/PrivateRoute";
-import AdminRoute from "./components/AdminRoute";
 
 // Pages Client
 import Login from "./pages/Login";
@@ -19,6 +18,8 @@ import AdminLoans from "./pages/admin/AdminLoans";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminDeposits from "./pages/admin/AdminDeposits";
 import AdminSettings from "./pages/admin/AdminSettings";
+import StaffRoute from "./components/StaffRoute";
+import AdminStaff from "./pages/admin/AdminStaff";
 
 export default function App() {
   return (
@@ -67,57 +68,65 @@ export default function App() {
           <Route
             path="/admin/dashboard"
             element={
-              <AdminRoute>
+              <StaffRoute>
                 <AdminDashboard />
-              </AdminRoute>
+              </StaffRoute>
             }
           />
           <Route
             path="/admin/clients"
             element={
-              <AdminRoute>
+              <StaffRoute>
                 <AdminClients />
-              </AdminRoute>
+              </StaffRoute>
             }
           />
           <Route
             path="/admin/accounts"
             element={
-              <AdminRoute>
+              <StaffRoute>
                 <AdminAccounts />
-              </AdminRoute>
+              </StaffRoute>
             }
           />
           <Route
             path="/admin/loans"
             element={
-              <AdminRoute>
+              <StaffRoute>
                 <AdminLoans />
-              </AdminRoute>
+              </StaffRoute>
             }
           />
           <Route
             path="/admin/transactions"
             element={
-              <AdminRoute>
+              <StaffRoute>
                 <AdminTransactions />
-              </AdminRoute>
+              </StaffRoute>
             }
           />
           <Route
             path="/admin/deposits"
             element={
-              <AdminRoute>
+              <StaffRoute>
                 <AdminDeposits />
-              </AdminRoute>
+              </StaffRoute>
             }
           />
           <Route
             path="/admin/settings"
             element={
-              <AdminRoute>
+              <StaffRoute>
                 <AdminSettings />
-              </AdminRoute>
+              </StaffRoute>
+            }
+          />
+          <Route
+            path="/admin/staff"
+            element={
+              <StaffRoute>
+                <AdminStaff />
+              </StaffRoute>
             }
           />
         </Routes>

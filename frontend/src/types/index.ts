@@ -2,7 +2,26 @@ export interface User {
   userId: number;
   fullName: string;
   email: string;
-  role: "Client" | "Admin";
+  role: UserRole;
+}
+
+export type UserRole =
+  | 'Admin'
+  | 'Superviseur'
+  | 'GestionnaireComptes'
+  | 'AgentCredit'
+  | 'Caissier'
+  | 'Auditeur'
+  | 'Client';
+
+export interface StaffUser {
+  userId:    number;
+  fullName:  string;
+  email:     string;
+  phone:     string | null;
+  role:      UserRole;
+  isActive:  boolean;
+  createdAt: string;
 }
 
 export interface Account {
